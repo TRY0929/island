@@ -500,3 +500,77 @@ class User extends Model {
   }
 ```
 
+### API权限分级控制
+
+在许多项目中，访问人员是有不同级别的区分，普通用户和管理员的权限就不一样，说一下比较简单的实现方式
+
++ 在生成token的时候就设置了一个参数叫scope，可以用来标识权限大小，意思是权限会随着token走
+
++ 在Auth类上加上属性，代表不同访问人员的权限高低，这里是Auth.USER = 8, Auth.ADMIN = 16，这是已经固定好的数值
++ 那如何在不同人员访问的时候设定具体的数值？**在Auth中构造函数设置当前实例化对象的权限值**
++ 后续只要在Auth中那个比较token的函数里判断当前实例对象的level和token中的level谁大就好，必须实例对象的大才能访问，不然就抛出Forbidden异常
+
+## 八、登录系统
+
+### 业务逻辑该写到哪
+
++ 业务逻辑一般也就写到两个地方，一个是直接卸载API接口里，还有一个就是写在提炼出来的Model类里
++ 从代码分层的角度来说，写在Model类里比较好
++ 之前提到的MVC模型，Model View Controller，业务逻辑就应该写在Model里
+
+### 小程序的登录过程
+
++ 在/app/services/wx.js中再写一个codeToToken类，这是一个更高层次、更抽象的类
++ 小程序登录的话不需要像邮箱登录一样输入账号和密码，而只需要输入code码，而这个码是微信小程序自动生成的 登录的时候传递过来就好，传入这个码之后 要去调用小程序的函数来判断当前用户是否合法
++ 传递之后微信小程序就会返回给用户一个openid，这时独一无二的用来标识不同用户身份的码
++ 和之前email登录不同，它没有一个用账号密码显示注册的过程，所以用来标识身份的就是它的openid，和之前的token不一样
++ 传入的参数总共有：code、appid、appsecret（后两者可以在微信后台查询到，是小程序固定的）
+
+![img](https://res.wx.qq.com/wxdoc/dist/assets/img/api-login.2fcc9f35.jpg)
+
++ 其实从上面的图应该可以看出来，一开始肯定是要在通过用户传进来的code去获取openid，openid就是鉴定用户身份的
++ 通过合法的code拿到openid后，判断当前数据库中是否已经存在这个用户的相关数据，若存在，直接下一步，若不存在则创建一个一条记录进去（用户只要登录过就会有记录）
++ 在用户是通过小程序登录的时候调用下面这个函数（实现上面的业务逻辑）
++ 这里实际上就是将逻辑和api分开了，不是直接将业务逻辑放到api中，而是重新定义一个类 将函数放到里面去处理相关的业务
+
+```javascript
+class WXManager {
+  static async codeToToken (code) {
+    const loginUrl = util.format(global.config.wx.url, global.config.wx.appId, global.config.wx.appSecret, code)
+    const result = await axios.get(loginUrl)
+    if (result.data.status !== 200) {
+      throw new global.errs.AuthFailed('openid获取失败')
+    }
+    if (result.data.errcode !== 0) {
+      throw new global.errs.AuthFailed('openid获取失败' + result.errcode)
+    }
+    const openid = result.data.openid
+    //  ，也是有利于代码分层1	
+    const user = await User.getUserByOpenid(openid)
+    if (!user) {
+      await User.registerByOpenid(openid)
+    }
+  }
+}
+```
+
+### 用来测试接口的微信小程序
+
++ 后端在编写好一些api接口之后会需要对接口进行测试，这时候就需要用到微信小程序来发送一些http请求了，由于需要测试的按钮非常多，而关键在于测试api而不是样式，所以引入小程序组件库来创建这些接口，里面已经实现好了很多不同的按钮或者菜单等基本组件的样式，直接调用就好了。
+
+  + 现在的小程序已经能比较好的使用npm了，创建好项目之后，在根目录下输入`npm init`，再在小程序设置中打开`使用npm模块`，加载lin-ui（此次要使用的组件库）`npm i lin-ui`，导入好包之后点击微信开发者工具中的 工具-构建npm，这时会出现miniprogram_npm文件夹，里面有lin-ui中编译好的所有组件；
+
+  + 在小程序页面中添加按钮，再给按钮添加点击事件来发送http请求（注意要打开后端服务器）
+  + 前后端联调就做到了
+
+#### 下面就简单说一下各接口的测试方法
+
+1. 获取openid（用户通过小程序登录时的凭证）
+   + 使用wx.login()函数，里面有回调函数success来获取到res.code，利用获取到的code来发送http请求：用wx.request()函数，传入参数是url（本地服务器地址，注意若是调试的时候填写的本地服务器地址，要在开发工具中设置好不设置https校验） 方法（POST） 以及Data
+   + 获取到的数据可以拿到openid了
+2. 测试token是否有效
+   + 在/app/api/v1/token.js文件中，多写一个测试的中间件函数，用于给前端发送测试token的请求用的
+   + 在validator.js中加一个NotEmptyValidator来校验token是否为空
+   + 在/middlewares/auth.js（专门用来写验证权限的东西的），给Auth类加一个verifyToken方法，利用上面的jwt（JsonWebToken）的verify函数来看当前传入的token是否合法，简单的返回true/false
+   + 在第一步的中间件函数调用verifyToken方法，将结果返回给客户端
+

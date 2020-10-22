@@ -2,7 +2,11 @@ const basicAuth = require('basic-auth')
 const jwt = require('jsonwebtoken')
 
 class Auth {
-  constructor () {}
+  constructor (level) {
+    this.level = level || 1
+    Auth.USER = 8
+    Auth.ADMIN = 16
+  }
   get m () {
     return async (ctx, next) => {
       const errMsg = 'token不合法'
@@ -24,7 +28,19 @@ class Auth {
         uid: decode.uid,
         scope: decode.scope
       }
+      if (decode.scope < this.level) {
+        throw new global.errs.Forbidden('权限不足')
+      }
       await next()
+    }
+  }
+
+  static verifyToken (token) {
+    try {
+      const v = jwt.verify(token, global.config.security.secretKey)
+      return true
+    } catch (error) {
+      return false
     }
   }
 }
