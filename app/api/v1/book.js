@@ -1,11 +1,18 @@
 const Router = require('koa-router')
-const router = new Router()
 const {HttpException, ParameterException} = require('../../../core/http-exception')
 const {PositiveIntegerValidator} = require('../../validators/validator')
+const { Auth } = require('../../../middlewares/auth')
+const {Favor} = require('../../models/favor')
 
-router.post('/book/:id/hot_list', async (ctx, next) => {
-  const v =  await new PositiveIntegerValidator().validate(ctx)
-  ctx.body = 'success'
+const router = new Router({
+  prefix: '/v1/book'
+})
+
+router.post('/count', new Auth().m, async (ctx, next) => {
+  const res = Favor.findOne({
+    where: {
+    }
+  })
 })
 
 module.exports = router

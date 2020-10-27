@@ -574,3 +574,58 @@ class WXManager {
    + 在/middlewares/auth.js（专门用来写验证权限的东西的），给Auth类加一个verifyToken方法，利用上面的jwt（JsonWebToken）的verify函数来看当前传入的token是否合法，简单的返回true/false
    + 在第一步的中间件函数调用verifyToken方法，将结果返回给客户端
 
+### basic-auth
+
+在HTTP中，基本认证（Basic access authentication）是一种用来允许网页浏览器或其他客户端程序在请求时提供用户名和口令形式的身份凭证的一种登录验证方式。
+
+#### 原理
+
+这一个典型的HTTP客户端和HTTP服务器的对话，服务器安装在同一台计算机上（localhost），包含以下步骤：
+
+- 客户端请求一个需要身份认证的页面，但是没有提供用户名和口令。这通常是用户在地址栏输入一个URL，或是打开了一个指向该页面的链接。
+- 服务端响应一个401应答码，并提供一个认证域。
+- 接到应答后，客户端显示该认证域（通常是所访问的计算机或系统的描述）给用户并提示输入用户名和口令。此时用户可以选择确定或取消。
+- 用户输入了用户名和口令后，客户端软件会在原先的请求上增加认证消息头，然后重新发送再次尝试。
+   其名称与值的形式是这样的(放到请求header里)
+
+```javascript
+Authorization: Basic base64encode(username+":"+password)
+```
+
+- 在本例中，服务器接受了该认证屏幕并返回了页面。如果用户凭据非法或无效，服务器可能再次返回401应答码，客户端可以再次提示用户输入口令。
+
+**注意:**客户端有可能不需要用户交互，在第一次请求中就发送认证消息头。
+
+#### 使用方法
+
+1、postman：
+
++ 点击Authorization
++ type选择Basic Authentic
++ 在username和password输入信息（登录时需要密码的情况 如小程序的邮箱登录）
++ 或者仅在username处输入token令牌（登陆时不需要密码的情况 如小程序的直接从微信点击进入）
+
+2、小程序发送请求时直接携带token令牌（账号密码也一样）：
+
++ 发送请求的header里带上Authorization，**注意要使用base64加密**
++ 引入base64的npm包来进行
++ 当然还是要注意上面的格式：`Authorization: Basic base64encode(username+":"+password)`
+
+```javascript
+wx.request({
+      url: 'http://localhost:3000/v1/classic/latest',
+      method: "GET",
+      header: {
+        Authorization: this._encode()
+      },
+      success: (res) => {
+        console.log(res.data)
+      }
+    })
+    
+_encode() {
+    const token = wx.getStorageSync('token')
+    return 'Basic ' + Base64.encode(token + ':')
+  }
+```
+

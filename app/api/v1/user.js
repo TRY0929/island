@@ -1,6 +1,6 @@
 const Router = require('koa-router')
 
-const {User} = require('../../modules/user')
+const {User} = require('../../models/user')
 
 const router = new Router({
   prefix: '/v1/user'

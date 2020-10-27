@@ -1,6 +1,6 @@
 const { ParameterException } = require('../../core/http-exception')
 const {LinValidator, Rule} = require('../../core/lin-validator')
-const {User} = require('../modules/user')
+const {User} = require('../models/user')
 const {loginType} = require('../lib/enum')
 
 class PositiveIntegerValidator extends LinValidator {
@@ -72,16 +72,7 @@ class TokenValidator extends LinValidator {
         max: 128
       })
     ]
-  }
-
-  validateLoginType (vals) {
-    const type = vals.body.type
-    if (!type) {
-      throw new Error('Type是必须的')
-    }
-    if (!loginType.isThisType(type)) {
-      throw new Error('Type不符合规范')
-    }
+    this.validateLoginType = checkType
   }
 }
 
@@ -94,9 +85,27 @@ class NotEmptyValidator extends LinValidator {
   }
 }
 
+function checkType (vals) {
+  const type = vals.body.type
+  if (!type) {
+    throw new Error('Type是必须的')
+  }
+  if (!loginType.isThisType(type)) {
+    throw new Error('Type不符合规范')
+  }
+}
+
+class LikeValidator extends PositiveIntegerValidator {
+  constructor () {
+    super()
+    this.typeValidator = checkType
+  }
+}
+
 module.exports = {
   PositiveIntegerValidator,
   RegisterValidator,
   TokenValidator,
-  NotEmptyValidator
+  NotEmptyValidator,
+  LikeValidator
 }
