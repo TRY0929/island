@@ -17,13 +17,11 @@ class Flow extends Model {
     if (!art) {
       throw new global.errs.NotFound()
     }
-    art.setDataValue({
-      index: res.index
-    })
+    art.setDataValue('index', flow.index)
     return art
   }
 
-  static async getFavor (art_id, type) {
+  static async getFavor (art_id, type, uid) {
     const res = await Flow.findOne({
       where: {
         art_id,
@@ -33,14 +31,47 @@ class Flow extends Model {
     if (!res) {
       throw new global.errs.NotFound()
     }
-    const art = await Art.getData(art_id, type)
-    const like_status = await Favor.likeOrDislike(art_id, type, uid)
-    const favor = {
-      fav_nums: art.fav_nums,
-      id: art_id,
-      like_status
+    const art = await new Art(parseInt(type), art_id).getDetail(uid)
+    if (!art) {
+      throw new global.errs.NotFound()
     }
-    ctx.body = favor
+    return {
+      fav_nums: art.art.fav_nums,
+      id: art_id,
+      like_status: art.like_status
+    }
+  }
+
+  static async getNextFlow (index, uid) {
+    const flow = await Flow.findOne({
+      where: {
+        index: index + 1
+      }
+    })
+    if (!flow) {
+      throw new global.errs.NotFound()
+    }
+    const art = await new Art(flow.type, flow.art_id).getDetail(uid)
+    if (!art) {
+      throw new global.errs.NotFound()
+    }
+    return art
+  }
+
+  static async getPrevFlow (index, uid) {
+    const flow = await Flow.findOne({
+      where: {
+        index: index - 1
+      }
+    })
+    if (!flow) {
+      throw new global.errs.NotFound()
+    }
+    const art = await new Art(flow.type, flow.art_id).getDetail(uid)
+    if (!art) {
+      throw new global.errs.NotFound()
+    }
+    return art
   }
 }
 

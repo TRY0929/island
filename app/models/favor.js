@@ -1,17 +1,18 @@
-const {sequelize} = require('../../core/db')
-const {Sequelize, Model} = require('sequelize')
-const {Art} = require('../models/art')
+const { sequelize } = require('../../core/db')
+const { Sequelize, Model, Op } = require('sequelize')
+const { Art } = require('../models/art')
 
 const {
   LikeError,
-  DislikeError
+  DislikeError,
+  NotFound
 } = require('../../core/http-exception')
 
 class Favor extends Model {
-  static async like (id, type, uid) {
-    const favor = await Favor.scope().findOne({
+  static async like(art_id, type, uid) {
+    const favor = await Favor.findOne({
       where: {
-        id, type, uid
+        art_id, type, uid
       }
     })
     if (favor) {
@@ -19,17 +20,17 @@ class Favor extends Model {
     }
     return sequelize.transaction(async t => {
       await Favor.create({
-        id, type, uid
-      }, {transaction: t})
-      const art = await Art.getData(id, type)
-      await art.increment('fav_nums', {by:1, transaction: t})
+        art_id, type, uid
+      }, { transaction: t })
+      const art = await Art.getData(art_id, type)
+      await art.increment('fav_nums', { by: 1, transaction: t })
     })
   }
 
-  static async dislike (id, type, uid) {
+  static async dislike(art_id, type, uid) {
     const favor = await Favor.findOne({
       where: {
-        id, type, uid
+        art_id, type, uid
       }
     })
     if (!favor) {
@@ -40,12 +41,12 @@ class Favor extends Model {
         force: true,
         transaction: t
       })
-      const art = await Art.getData(id, type)
-      await art.decrement('fav_nums', {by:1, transaction: t})
+      const art = await Art.getData(art_id, type)
+      await art.decrement('fav_nums', { by: 1, transaction: t })
     })
   }
 
-  static async likeOrDislike (id, type, uid) {
+  static async likeOrDislike(id, type, uid) {
     const res = await Favor.findOne({
       where: {
         id, type, uid
@@ -55,6 +56,37 @@ class Favor extends Model {
       return 0
     } else {
       return 1
+    }
+  }
+
+  static async getUserLike(uid) {
+    const res = await Favor.findAll({
+      where: {
+        uid,
+        type: {
+          [Op.not]: 400
+        }
+      }
+    })
+    if (!res) {
+      return null
+    }
+    const arts = await Art.getList(res)
+    return arts
+  }
+
+  static async getBookFavor(uid, book_id) {
+    const count = await Favor.count({
+      where: {
+        type: 400,
+        art_id: book_id
+      }
+    })
+    const status = await Favor.likeOrDislike(book_id, 400, uid)
+    return {
+      fav_nums: count,
+      like_status: status,
+      id: book_id
     }
   }
 

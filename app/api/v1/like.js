@@ -11,9 +11,9 @@ router.post('/', new Auth().m, async (ctx, next) => {
   const v = await new LikeValidator().validate(ctx, {
     id: 'art_id'
   })
-  const id = v.get('body.art_id')
+  const art_id = v.get('body.art_id')
   const type = v.get('body.type')
-  await Favor.like(id, type, ctx.auth.uid)
+  await Favor.like(art_id, type, ctx.auth.uid)
   throw new global.errs.Success()
 })
 

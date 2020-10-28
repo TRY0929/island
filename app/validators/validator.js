@@ -1,7 +1,7 @@
 const { ParameterException } = require('../../core/http-exception')
 const {LinValidator, Rule} = require('../../core/lin-validator')
 const {User} = require('../models/user')
-const {loginType} = require('../lib/enum')
+const {loginType, artType} = require('../lib/enum')
 
 class PositiveIntegerValidator extends LinValidator {
   constructor () {
@@ -72,7 +72,9 @@ class TokenValidator extends LinValidator {
         max: 128
       })
     ]
-    this.validateLoginType = checkType
+    const checker = new Checker(loginType)
+    this.validateLoginType = checker.checkType.bind(checker)
+    // this.validateLoginType = checkType
   }
 }
 
@@ -85,20 +87,65 @@ class NotEmptyValidator extends LinValidator {
   }
 }
 
-function checkType (vals) {
-  const type = vals.body.type
-  if (!type) {
-    throw new Error('Type是必须的')
+class Checker {
+  constructor (type) {
+    this.enumType = type
   }
-  if (!loginType.isThisType(type)) {
-    throw new Error('Type不符合规范')
+  checkType (vals) {
+    let type = vals.body.type || vals.path.type
+    if (!type) {
+      throw new Error('Type是必须的')
+    }
+    type = parseInt(type)
+    if (!this.enumType.isThisType(type)) {
+      throw new Error('Type不符合规范')
+    }
   }
 }
 
 class LikeValidator extends PositiveIntegerValidator {
   constructor () {
     super()
-    this.typeValidator = checkType
+    const checker = new Checker(artType)
+    this.validateType = new Checker(artType).checkType.bind(checker)
+  }
+}
+
+class SearchValidator extends LinValidator {
+  constructor () {
+    super()
+    this.q = [
+      new Rule('isLength', '搜索关键字不能为空', {
+        max: 16,
+        min: 1
+      })
+    ]
+    this.start = [
+      new Rule('isInt', 'start不符合规范', {
+        max: 60000,
+        min: 0
+      }),
+      new Rule('isOptional', '', 0)
+    ]
+    this.count = [
+      new Rule('isInt', 'count不符合规范', {
+        min: 1,
+        max: 20
+      }),
+      new Rule('isOptional', '', 20)
+    ]
+  }
+}
+
+class CommentValidator extends PositiveIntegerValidator {
+  constructor() {
+    super()
+    this.content = [
+      new Rule('isLength', '长度不符合规范', {
+        max: 12,
+        min: 1
+      })
+    ]
   }
 }
 
@@ -107,5 +154,7 @@ module.exports = {
   RegisterValidator,
   TokenValidator,
   NotEmptyValidator,
-  LikeValidator
+  LikeValidator,
+  SearchValidator,
+  CommentValidator
 }
