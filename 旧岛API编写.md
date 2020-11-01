@@ -1,13 +1,31 @@
 # 旧岛后端API编写以及前端测试接口编写
 
-## api编写整体框架（一定要注意整个过程都是同步的）
-
 ## 目录
 
++ [api编写整体框架](#api)
+
 + [前端测试接口](#font-end)
-  + [basic-auth](#basic-auth)
 
+api接口编写
 
++ [小程序（/v1/token）](#minip)
+  + [登录（/）](#login)
+  + [验证（/verify）](#verify)
++ [点赞（/v1/like）](#like)
++ [期刊（/v1/classic）](#classic)
+  + [获取最新一期](#classic1)
+  + [获取上/下/某一期](#classic2)
+  + [获取某期点赞信息](#classic3)
+  + [获取我喜欢的期刊](#classic4)
++ [书籍](#book)
+  + [获取热门书籍](#book1)
+  + [获取书籍详细信息、书籍搜索](#book2)
+  + [获取喜欢书籍数量](#book3)
++ [短评](#comment)
+  + [添加短评](#comment1)
+  + [获取短评](#comment2)
+
+## <a id="api">api编写整体框架（一定要注意整个过程都是同步的）</a>
 
 + **数据库**：每个操作要有对应的数据库，也就是前端发来的请求是要从哪张表中获取信息，在models文件夹下要写好相应的数据表操作文件（一个文件操作一张表）
 + **token校验**：用koa-router插件写好相应的请求格式后，在处理的中间件函数之前要调用校验token的函数（专门写在了middlewares/auth.js中）
@@ -86,7 +104,7 @@ _encode() {
   }
 ```
 
-## 小程序（/v1/token）
+## <a id="minip">小程序（/v1/token）</a>
 
 ### 数据库
 
@@ -101,7 +119,7 @@ _encode() {
 
 ### 接口实现
 
-#### 登录（/）
+#### <a id="login">登录（/）</a>
 
 + 用switch...case语句通过当前type（登录方式）的不同来选择不同的处理函数，成功的话最后都要返回给用户token值：
 
@@ -146,7 +164,7 @@ onGetToken () {
 },
 ```
 
-#### 验证（/verify）
+#### <a id="verify">验证（/verify）</a>
 
 + 作用很简单，其实就是来给程序员进行调试的接口，将保存的token放到请求body里来发送请求；
 + 调用Auth类的verifyToken函数（在middlewares/auth.js中），verifyToken中又用jsonwebtoken中自带的verify函数来进行校验，返回结果即可；
@@ -170,7 +188,7 @@ onVerifyToken () {
 }
 ```
 
-## 点赞（/v1/like）
+## <a id="like">点赞（/v1/like）</a>
 
 ### 数据库
 
@@ -224,7 +242,7 @@ onLike () {
 },
 ```
 
-## 期刊（/v1/classic）
+## <a id="classic">期刊（/v1/classic）</a>
 
 ### 数据库
 
@@ -245,19 +263,19 @@ onLike () {
   + Flow中接收期刊index, 通过index在flow表里查找当前期刊相应的type和art_id
   + 根据刚刚查找到的两个数据, 调用Art里的getData方法, 在不同的表里找到对应要找到的数据信息并返回
 
-#### 获取最新一期(/latest)
+#### <a id="classic1">获取最新一期(/latest)</a>
 
 + 不需要传参数,直接调用Flow的getLatest函数;
 + getLatest函数里, 由于是要获取最新一期, 也就是index最大的一期, 但由于期刊数目可能会变 不太方便直接把数字写死, 因此利用sequelize的findOne的order方法将index按照降序排序, 再获取第一个即可, 再像说明里的获取详细信息
 + 像这种数据库的搜索方法, 都到sequelize官网去看一下即可, 很多
 
-#### 获取上/下/某一期(/:index/next  /:index/prev  /:type/:id)
+#### <a id="classic2">获取上/下/某一期(/:index/next  /:index/prev  /:type/:id)</a>
 
 + 参数校验检验index, 这里可以还是用PositiveIntegerValidator来检验, 但里面写的要检验的参数的id, 我们可以手动在validate函数里加上第二个参数, {id: 'index'}, 来给里面要检测的东西换个名字
 + 直接在查询的时候index+1或者-1就可以控制上/下一期了
 + 某一期的话直接把type和id传到art里获取那一期的信息即可
 
-#### 获取某期点赞信息(/:type/:id/favor)
+#### <a id="classic3">获取某期点赞信息(/:type/:id/favor)</a>
 
 + 参数校验需要校验type和id, 这里直接用LikeValidator
 
@@ -268,7 +286,7 @@ onLike () {
   + 这里的数据又是在一张表里查不完的数据, 需要返回fav_nums id like_status三个数据, 其中flow表中只有id这一个数据, 另外fav_nums要去具体type对应的表中找, 而like_status要去favor中看有没有这一期刊对应的信息, 所以涉及到了三张表
   + 大概思想就是按照上面这样去查找
 
-#### 获取我喜欢的期刊(/favor)
+#### <a id="classic4">获取我喜欢的期刊(/favor)</a>
 
 + 不需要传参数, 直接调用Favor的getUserLike函数, 这个函数里找到favor表中所有当前用户(通过uid号)点赞过的期刊, 当然**获取单单favor表中的信息是不够的, 还要有详细信息**
 + 如果是对获取的favor表中当前所有点赞条目进行遍历, 依次找到对应的详细信息也是可以的, 且代码量也少, 但是**一遍一遍查询数据库太耗费资源了**, 且多次查询数据库可能会引起和其他程序并发查询的问题
@@ -327,7 +345,7 @@ static async _getListType (ids, key) {
 }
 ```
 
-## 书籍（/v1/book）
+## <a id="book">书籍（/v1/book）</a>
 
 ### 数据库
 
@@ -340,7 +358,7 @@ static async _getListType (ids, key) {
 
 ### 接口实现
 
-#### 获取热门书籍(/hot_list)
+#### <a id="book1">获取热门书籍(/hot_list)</a>
 
 + 不需要进行参数校验，且其实这里大部分内容都已经在hot_list表里了，只剩下一个fav_nums不在
   + 要拿到fav_nums怎么拿？之前拿movie、sentence或music的fav_nums的时候都是直接去相应的表里拿，但现在书籍的实际详情信息其实并不在我们自己的数据库上；
@@ -401,16 +419,16 @@ static _getBookStatus (book, favors) {
 }
 ```
 
-#### 获取书籍详细信息（/:id/detail）、书籍搜索（/search）
+#### <a id="book2">获取书籍详细信息（/:id/detail）、书籍搜索（/search）</a>
 
 + 这两个都是要访问远程服务器来请求得到信息的，远程服务器网址写在配置文件里，这样改也方便，结合要查询的参数 用axios发送请求即可；
 
-#### 获取喜欢书籍数量（/favor/count）
+#### <a id="book3">获取喜欢书籍数量（/favor/count）</a>
 
 + 不用校验参数，直接调用book的getMyFavorBookCount方法，将当前用户uid传进去（通过ctx.auth.uid得到，这是在token校勘的时候放到上下文的）；
 + 在getMyFavorBookCount中直接查找Favor表里的关于书本的当前uid喜欢的记录再返回即可。
 
-## 短评（其实这个也是在book部分的，不过它又重新操控了一个数据表，所以就又写个大标题吧= =）
+## <a id="comment">短评（其实这个也是在book部分的，不过它又重新操控了一个数据表，所以就又写个大标题吧= =）</a>
 
 ### 数据库
 
@@ -425,14 +443,14 @@ static _getBookStatus (book, favors) {
 
 ### 接口实现
 
-#### 添加短评（/add/comment）
+#### <a id="comment1">添加短评（/add/comment）</a>
 
 + 要添加的书籍id以及短评内容都放到请求体里，参数校验完毕后调用comment的addComment函数；
 + addComment先搜索一遍comment表里的数据，看是否有书籍id和comment内容都一样的记录（也就是同一本书下有没有一样的短评）：
   + 有的话，直接在那条记录基础上数量加个一；
   + 没有的话添加一条新纪录。
 
-#### 获取短评（/:book_id/short_comment）
+#### <a id="comment2">获取短评（/:book_id/short_comment）</a>
 
 + 还是用PositiveIntegerValidator来校验book_id，注意给id换个名字；
 + 调用comment的getComment方法，将当前book_id都传进去来获取对应书籍的短评，里面内容就不多说了，就是查找。
