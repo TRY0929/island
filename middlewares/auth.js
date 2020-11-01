@@ -7,6 +7,7 @@ class Auth {
     Auth.USER = 8
     Auth.ADMIN = 16
   }
+  // 检验用户token是否合法
   get m () {
     return async (ctx, next) => {
       const errMsg = 'token不合法'

@@ -72,27 +72,20 @@ class Art {
 
   static async _getListType (ids, key) {
     let res
+    const finder = {
+      where: {
+        id: ids
+      }
+    }
     switch (key) {
       case 100:
-        res = await Movie.findAll({
-          where: {
-            id: ids
-          }
-        })
+        res = await Movie.findAll(finder)
         break
       case 200:
-        res = await Music.findAll({
-          where: {
-            id: ids
-          }
-        })
+        res = await Music.findAll(finder)
         break;
       case 300:
-        res = await Sentence.findAll({
-          where: {
-            id: ids
-          }
-        })
+        res = await Sentence.findAll(finder)
         break
       default:
         break
