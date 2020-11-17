@@ -49,7 +49,7 @@ class Favor extends Model {
   static async likeOrDislike(id, type, uid) {
     const res = await Favor.findOne({
       where: {
-        id, type, uid
+        art_id: id, type, uid
       }
     })
     if (!res) {
@@ -84,7 +84,7 @@ class Favor extends Model {
     })
     const status = await Favor.likeOrDislike(book_id, 400, uid)
     return {
-      fav_nums: count,
+      fav_nums: count || 0,
       like_status: status,
       id: book_id
     }

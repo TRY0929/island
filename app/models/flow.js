@@ -17,7 +17,7 @@ class Flow extends Model {
     if (!art) {
       throw new global.errs.NotFound()
     }
-    art.setDataValue('index', flow.index)
+    art.setDataValue('index', res.index)
     return art
   }
 

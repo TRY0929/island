@@ -38,6 +38,15 @@ const sequelize = new Sequelize(dbName, user, password, {
 
 Model.prototype.toJSON  = function () {
   let data = clone(this.dataValues)
+
+  for (key in data) {
+    if (key === 'image') {
+      if (!data[key].startsWith('http')) {
+        data[key] = global.config.host + data[key]
+      }
+    }
+  }
+
   if (isArray(this.exclude)) {
     this.exclude.forEach(item => {
       unset(data, item)

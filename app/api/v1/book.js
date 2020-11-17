@@ -12,11 +12,9 @@ const router = new Router({
   prefix: '/v1/book'
 })
 
-router.get('/hot_list', new Auth().m, async (ctx, next) => {
+router.get('/hot_list', async (ctx, next) => {
   const books = await HotBook.getAll()
-  ctx.body = {
-    books
-  }
+  ctx.body = books
 })
 
 router.get('/:id/detail', new Auth().m, async (ctx, next) => {
@@ -25,7 +23,7 @@ router.get('/:id/detail', new Auth().m, async (ctx, next) => {
   ctx.body = await book.detail()
 })
 
-router.get('/search', new Auth().m, async (ctx, next) => {
+router.get('/search', async (ctx, next) => {
   const v = await new SearchValidator().validate(ctx)
   const book = await Book.searchFromYushu(v.get('query.q'), v.get('query.count'), v.get('query.start'))
   ctx.body = book
@@ -52,12 +50,16 @@ router.post('/add/comment', new Auth().m, async (ctx, next) => {
 
 router.get('/:book_id/short_comment', new Auth().m, async (ctx, next) => {
   const v = await new PositiveIntegerValidator().validate(ctx, {id: 'book_id'})
-  const res = await Comment.getComment(v.get('path.book_id'))
+  const book_id = v.get('path.book_id')
+  const res = await Comment.getComment(book_id)
   if (!res) {
     throw new global.errs.Notfound()
   }
   res.exclude = ['content']
-  ctx.body = res
+  ctx.body = {
+    comment: res,
+    book_id
+  }
 })
 
 module.exports = router

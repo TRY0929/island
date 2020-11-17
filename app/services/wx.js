@@ -17,7 +17,7 @@ class WXManager {
       throw new global.errs.AuthorFailed('openid获取失败' + result.data.errmsg)
     }
     const openid = result.data.openid
-    const user = await User.getUserByOpenid(openid)
+    let user = await User.getUserByOpenid(openid)
     if (!user) {
       user = await User.registerByOpenid(openid)
     }
